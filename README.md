@@ -297,19 +297,27 @@ curl -X POST 'http://localhost:8080/api/consumer/dlt/<DLT_ID>/replay' \
 
 ## 10. 測試
 
-### 10.1 Integration test（已加入骨架）
-- `src/test/java/com/joechen/outboxmonitor/modulithoutbox/OutboxFlowIntegrationTest.java`
-- 使用 Testcontainers Postgres 驗證：
-  - 呼叫 `/api/modulith-outbox/orders`
-  - `outbox_event` 有寫入資料
-  - `correlation_id` 正確保存
+### 10.1 Integration tests（已加入）
+1. `OutboxFlowIntegrationTest`
+   - 路徑：`src/test/java/com/joechen/outboxmonitor/modulithoutbox/OutboxFlowIntegrationTest.java`
+   - 使用 Testcontainers Postgres 驗證：
+     - 呼叫 `/api/modulith-outbox/orders`
+     - `outbox_event` 有寫入資料
+     - `correlation_id` 正確保存
+
+2. `DltReplayIntegrationTest`
+   - 路徑：`src/test/java/com/joechen/outboxmonitor/consumer/DltReplayIntegrationTest.java`
+   - 使用 Embedded Kafka 驗證：
+     - `DltReplayService` 可將 `.DLT` 事件重送回主 topic
+     - replay 後 header（`replayed_from_dlt`, `correlation_id`）存在
 
 執行：
 ```bash
 mvn test
 ```
 
-> 需可用 Docker 環境（Testcontainers 會啟動 Postgres 容器）
+> `OutboxFlowIntegrationTest` 需 Docker（Testcontainers Postgres）。
+> `DltReplayIntegrationTest` 使用 Embedded Kafka，不需另外啟 Kafka 容器。
 
 ## 11. 下一步建議（正式化路線）
 
