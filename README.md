@@ -219,8 +219,18 @@ curl 'http://localhost:8080/api/consumer/dlt?limit=20'
 ```
 
 手動 replay 單筆 DLT（把 `<DLT_ID>` 替換成上一步回傳）：
+
+先設定管理 token（`application.yml`）：
+```yaml
+app:
+  admin:
+    token: "change-me"
+```
+
+呼叫 replay API 時帶上 header `X-Admin-Token`：
 ```bash
-curl -X POST 'http://localhost:8080/api/consumer/dlt/<DLT_ID>/replay'
+curl -X POST 'http://localhost:8080/api/consumer/dlt/<DLT_ID>/replay' \
+  -H 'X-Admin-Token: change-me'
 ```
 
 ### Step 7: Kafka UI

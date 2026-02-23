@@ -22,6 +22,8 @@ spring:
       republish-outstanding-events-on-restart: true
 
 app:
+  admin:
+    token: ""
   outbox:
     retry:
       max-attempts: 5
