@@ -15,13 +15,16 @@ public class OutboxWriter {
 
     private final NamedParameterJdbcTemplate jdbc;
     private final boolean failFirstAttempt;
+    private final OutboxMetrics outboxMetrics;
 
     private volatile boolean failedOnce = false;
 
     public OutboxWriter(NamedParameterJdbcTemplate jdbc,
-                        @Value("${app.outbox.simulate-fail-first-attempt:false}") boolean failFirstAttempt) {
+                        @Value("${app.outbox.simulate-fail-first-attempt:false}") boolean failFirstAttempt,
+                        OutboxMetrics outboxMetrics) {
         this.jdbc = jdbc;
         this.failFirstAttempt = failFirstAttempt;
+        this.outboxMetrics = outboxMetrics;
     }
 
     @ApplicationModuleListener
@@ -29,30 +32,37 @@ public class OutboxWriter {
             backoff = @Backoff(delayExpression = "${app.outbox.retry.backoff-ms:500}"))
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void on(OrderCreatedEvent event) {
-        if (failFirstAttempt && !failedOnce) {
-            failedOnce = true;
-            throw new IllegalStateException("simulated transient failure before writing outbox");
-        }
+        try {
+            if (failFirstAttempt && !failedOnce) {
+                failedOnce = true;
+                throw new IllegalStateException("simulated transient failure before writing outbox");
+            }
 
-        jdbc.update("""
-                insert into outbox_event(
-                    event_id, aggregate_type, aggregate_id, event_type, payload,
-                    traceparent, tracestate, correlation_id, causation_id, occurred_at
-                ) values (
-                    :eventId, :aggregateType, :aggregateId, :eventType, cast(:payload as jsonb),
-                    :traceparent, :tracestate, :correlationId, :causationId, :occurredAt
-                )
-                on conflict (event_id) do nothing
-                """, new MapSqlParameterSource()
-                .addValue("eventId", event.trace().eventId())
-                .addValue("aggregateType", "Order")
-                .addValue("aggregateId", event.orderId())
-                .addValue("eventType", "OrderCreated")
-                .addValue("payload", "{\"orderId\":\"" + event.orderId() + "\",\"customerId\":\"" + event.customerId() + "\",\"amount\":" + event.amount() + "}")
-                .addValue("traceparent", event.trace().traceparent())
-                .addValue("tracestate", event.trace().tracestate())
-                .addValue("correlationId", event.trace().correlationId())
-                .addValue("causationId", event.trace().causationId())
-                .addValue("occurredAt", event.occurredAt()));
+            jdbc.update("""
+                    insert into outbox_event(
+                        event_id, aggregate_type, aggregate_id, event_type, payload,
+                        traceparent, tracestate, correlation_id, causation_id, occurred_at
+                    ) values (
+                        :eventId, :aggregateType, :aggregateId, :eventType, cast(:payload as jsonb),
+                        :traceparent, :tracestate, :correlationId, :causationId, :occurredAt
+                    )
+                    on conflict (event_id) do nothing
+                    """, new MapSqlParameterSource()
+                    .addValue("eventId", event.trace().eventId())
+                    .addValue("aggregateType", "Order")
+                    .addValue("aggregateId", event.orderId())
+                    .addValue("eventType", "OrderCreated")
+                    .addValue("payload", "{\"orderId\":\"" + event.orderId() + "\",\"customerId\":\"" + event.customerId() + "\",\"amount\":" + event.amount() + "}")
+                    .addValue("traceparent", event.trace().traceparent())
+                    .addValue("tracestate", event.trace().tracestate())
+                    .addValue("correlationId", event.trace().correlationId())
+                    .addValue("causationId", event.trace().causationId())
+                    .addValue("occurredAt", event.occurredAt()));
+
+            outboxMetrics.incWriteSuccess();
+        } catch (RuntimeException ex) {
+            outboxMetrics.incWriteFailure();
+            throw ex;
+        }
     }
 }

@@ -97,6 +97,14 @@ flowchart LR
 - `KafkaDltConsumer` 會消費 DLT 並記錄錯誤
 - `/api/consumer/events` 會多顯示 `dlt` 計數
 
+### 3.7 Prometheus Metrics
+可在 `GET /actuator/prometheus` 查看以下關鍵計數：
+- `outbox_write_success_total`
+- `outbox_write_failure_total`
+- `consumer_processed_total`
+- `consumer_dedup_hit_total`
+- `consumer_dlt_total`
+
 ---
 
 ## 4. 專案結構（重點）
