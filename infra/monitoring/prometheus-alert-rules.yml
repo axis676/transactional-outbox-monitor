@@ -1,0 +1,32 @@
+groups:
+  - name: outbox-monitor-alerts
+    rules:
+      - alert: ConsumerDltIncreased
+        expr: increase(consumer_dlt_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: transactional-outbox-monitor
+        annotations:
+          summary: "Consumer DLT events detected"
+          description: "consumer_dlt_total increased in the last 5 minutes. Check DLT topic and failed payloads."
+
+      - alert: OutboxWriteFailuresDetected
+        expr: increase(outbox_write_failure_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: transactional-outbox-monitor
+        annotations:
+          summary: "Outbox write failures detected"
+          description: "outbox_write_failure_total increased in the last 5 minutes. Check DB connectivity and listener retry logs."
+
+      - alert: ConsumerDedupSpike
+        expr: increase(consumer_dedup_hit_total[10m]) > 20
+        for: 2m
+        labels:
+          severity: info
+          service: transactional-outbox-monitor
+        annotations:
+          summary: "Consumer dedup spike"
+          description: "High duplicate-event skip rate detected. Verify producer retries / replay workflow."

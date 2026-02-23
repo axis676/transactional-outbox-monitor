@@ -245,14 +245,44 @@ app:
 
 ---
 
-## 9. 下一步建議（正式化路線）
+## 9. 監控與告警
+
+### 9.1 Prometheus scrape
+請確認 Prometheus 已抓取：
+- `http://<service-host>:8080/actuator/prometheus`
+
+### 9.2 Alert rules（範本）
+本專案已提供範本：
+- `infra/monitoring/prometheus-alert-rules.yml`
+
+內含示例告警：
+- `ConsumerDltIncreased`
+- `OutboxWriteFailuresDetected`
+- `ConsumerDedupSpike`
+
+> 這些 threshold 是 POC 預設，請依實際流量調整。
+
+### 9.3 Runbook（簡版）
+- `ConsumerDltIncreased`：
+  1. 看 `outbox.event.OrderCreated.DLT` payload + headers
+  2. 看 app log（含 `correlation_id`）定位失敗點
+  3. 修復後 replay（後續可做管理 API）
+- `OutboxWriteFailuresDetected`：
+  1. 檢查 DB 連線與 schema
+  2. 檢查 `OutboxWriter` retry 日誌
+  3. 確認 failure 是否持續增加
+- `ConsumerDedupSpike`：
+  1. 檢查是否重播 / 重複投遞
+  2. 檢查 producer 重試是否異常升高
+  3. 確認 replay 流程有無重複觸發
+
+## 10. 下一步建議（正式化路線）
 
 1. 將 consumer 改為獨立服務（不同 repo/deploy）
-2. 加入 consumer idempotency table（以 `event_id` 去重）
-3. 引入 DLQ/DLT 與告警
-4. 將 payload schema 化（Avro/JSON Schema）
-5. 加上整合測試（Testcontainers: Postgres + Kafka + Connect）
-6. 對接 OTEL exporter（Tempo/Jaeger）做端到端追蹤
+2. 引入 DLQ replay 管理 API
+3. 將 payload schema 化（Avro/JSON Schema）
+4. 加上整合測試（Testcontainers: Postgres + Kafka + Connect）
+5. 對接 OTEL exporter（Tempo/Jaeger）做端到端追蹤
 
 ---
 
