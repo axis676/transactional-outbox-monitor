@@ -23,3 +23,10 @@ create table if not exists outbox_event (
 create unique index if not exists uk_outbox_event_event_id on outbox_event(event_id);
 create index if not exists idx_outbox_event_created_at on outbox_event(created_at);
 create index if not exists idx_outbox_event_correlation_id on outbox_event(correlation_id);
+
+create table if not exists consumed_event (
+    event_id varchar(100) not null,
+    consumer_name varchar(100) not null,
+    consumed_at timestamptz not null default now(),
+    primary key (event_id, consumer_name)
+);

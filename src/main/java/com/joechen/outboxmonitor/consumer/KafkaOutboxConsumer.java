@@ -21,11 +21,17 @@ public class KafkaOutboxConsumer {
 
     private final TracePropagationSupport tracePropagationSupport;
     private final ConsumedEventStore consumedEventStore;
+    private final ConsumerIdempotencyService idempotencyService;
+    private final ConsumerMetrics consumerMetrics;
 
     public KafkaOutboxConsumer(TracePropagationSupport tracePropagationSupport,
-                               ConsumedEventStore consumedEventStore) {
+                               ConsumedEventStore consumedEventStore,
+                               ConsumerIdempotencyService idempotencyService,
+                               ConsumerMetrics consumerMetrics) {
         this.tracePropagationSupport = tracePropagationSupport;
         this.consumedEventStore = consumedEventStore;
+        this.idempotencyService = idempotencyService;
+        this.consumerMetrics = consumerMetrics;
     }
 
     @KafkaListener(topics = "outbox.event.OrderCreated", groupId = "outbox-monitor-consumer")
@@ -34,14 +40,30 @@ public class KafkaOutboxConsumer {
         Span span = tracePropagationSupport.startLinkedConsumerSpan("kafka.consume.order-created", headers);
 
         String correlationId = headers.getOrDefault("correlation_id", "");
+        String eventId = headers.getOrDefault("id", headers.getOrDefault("event_id", ""));
         MDC.put("correlation_id", correlationId);
         try {
             span.setAttribute("messaging.system", "kafka");
             span.setAttribute("messaging.destination", record.topic());
             span.setAttribute("messaging.kafka.partition", record.partition());
+            span.setAttribute("messaging.event_id", eventId);
 
-            log.info("Consumed outbox event topic={} key={} correlation_id={}",
-                    record.topic(), record.key(), correlationId);
+            if (!eventId.isBlank()) {
+                boolean firstSeen = idempotencyService.markIfFirstSeen(eventId, "outbox-monitor-consumer");
+                if (!firstSeen) {
+                    consumerMetrics.incDedupHit();
+                    log.info("Skipped duplicate event topic={} key={} event_id={} correlation_id={}",
+                            record.topic(), record.key(), eventId, correlationId);
+                    return;
+                }
+            } else {
+                log.warn("event_id header missing, skip idempotency check topic={} key={}",
+                        record.topic(), record.key());
+            }
+
+            consumerMetrics.incProcessed();
+            log.info("Consumed outbox event topic={} key={} event_id={} correlation_id={}",
+                    record.topic(), record.key(), eventId, correlationId);
 
             consumedEventStore.add(record.topic(), record.key(), record.value(), headers);
         } finally {

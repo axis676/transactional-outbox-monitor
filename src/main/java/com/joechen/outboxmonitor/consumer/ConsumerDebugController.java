@@ -13,9 +13,12 @@ import java.util.Map;
 public class ConsumerDebugController {
 
     private final ConsumedEventStore consumedEventStore;
+    private final ConsumerMetrics consumerMetrics;
 
-    public ConsumerDebugController(ConsumedEventStore consumedEventStore) {
+    public ConsumerDebugController(ConsumedEventStore consumedEventStore,
+                                   ConsumerMetrics consumerMetrics) {
         this.consumedEventStore = consumedEventStore;
+        this.consumerMetrics = consumerMetrics;
     }
 
     @GetMapping("/events")
@@ -23,6 +26,10 @@ public class ConsumerDebugController {
         int n = Math.max(1, Math.min(limit, 200));
         return ResponseEntity.ok(Map.of(
                 "count", consumedEventStore.latest(n).size(),
+                "metrics", Map.of(
+                        "processed", consumerMetrics.processed(),
+                        "dedupHit", consumerMetrics.dedupHit()
+                ),
                 "items", consumedEventStore.latest(n)
         ));
     }

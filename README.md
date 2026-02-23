@@ -83,6 +83,12 @@ flowchart LR
   - 寫入 MDC
   - 建立 linked consumer span
 
+### 3.5 Consumer 防重複（Idempotency）
+- consumer 先將 `event_id` 寫入 `consumed_event`
+- SQL: `insert ... on conflict do nothing`
+- 若已存在代表重覆事件，直接 skip，不重做副作用
+- `/api/consumer/events` 可看到 `processed` 與 `dedupHit` 計數
+
 ---
 
 ## 4. 專案結構（重點）
@@ -135,6 +141,12 @@ infra/debezium
 - `traceparent`, `tracestate`
 - `correlation_id`, `causation_id`
 - `occurred_at`, `created_at`
+
+### `consumed_event`（consumer idempotency）
+- `event_id`
+- `consumer_name`
+- `consumed_at`
+- PK: `(event_id, consumer_name)`
 
 ---
 
