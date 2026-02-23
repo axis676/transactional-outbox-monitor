@@ -213,6 +213,16 @@ app:
 
 再送一筆包含 `O-FAIL` 的 payload，事件會在重試後進入 DLT。
 
+查看 DLT 暫存：
+```bash
+curl 'http://localhost:8080/api/consumer/dlt?limit=20'
+```
+
+手動 replay 單筆 DLT（把 `<DLT_ID>` 替換成上一步回傳）：
+```bash
+curl -X POST 'http://localhost:8080/api/consumer/dlt/<DLT_ID>/replay'
+```
+
 ### Step 7: Kafka UI
 - Kafdrop: `http://localhost:9000`
 - Topics:

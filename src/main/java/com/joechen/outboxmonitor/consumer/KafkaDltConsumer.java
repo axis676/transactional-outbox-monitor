@@ -17,9 +17,12 @@ public class KafkaDltConsumer {
     private static final Logger log = LoggerFactory.getLogger(KafkaDltConsumer.class);
 
     private final ConsumerMetrics consumerMetrics;
+    private final DltEventStore dltEventStore;
 
-    public KafkaDltConsumer(ConsumerMetrics consumerMetrics) {
+    public KafkaDltConsumer(ConsumerMetrics consumerMetrics,
+                            DltEventStore dltEventStore) {
         this.consumerMetrics = consumerMetrics;
+        this.dltEventStore = dltEventStore;
     }
 
     @KafkaListener(topics = "outbox.event.OrderCreated.DLT", groupId = "outbox-monitor-dlt-consumer")
@@ -30,7 +33,8 @@ public class KafkaDltConsumer {
         }
 
         consumerMetrics.incDlt();
-        log.error("DLT received topic={} key={} headers={} payload={}",
-                record.topic(), record.key(), headers, record.value());
+        String dltId = dltEventStore.add(record.topic(), record.key(), record.value(), headers);
+        log.error("DLT received dltId={} topic={} key={} headers={} payload={}",
+                dltId, record.topic(), record.key(), headers, record.value());
     }
 }
