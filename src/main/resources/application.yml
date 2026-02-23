@@ -27,6 +27,8 @@ app:
       max-attempts: 5
       backoff-ms: 500
     simulate-fail-first-attempt: false
+  consumer:
+    fail-on-payload-contains: ""
 
 management:
   endpoints:

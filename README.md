@@ -89,6 +89,14 @@ flowchart LR
 - 若已存在代表重覆事件，直接 skip，不重做副作用
 - `/api/consumer/events` 可看到 `processed` 與 `dedupHit` 計數
 
+### 3.6 Consumer Retry + DLT
+- Kafka listener 使用 `DefaultErrorHandler`
+- retry 策略：exponential backoff（500ms 起跳，倍增到 5s 上限）
+- 超過重試後自動送往 `<原topic>.DLT`
+  - 目前示範 topic: `outbox.event.OrderCreated.DLT`
+- `KafkaDltConsumer` 會消費 DLT 並記錄錯誤
+- `/api/consumer/events` 會多顯示 `dlt` 計數
+
 ---
 
 ## 4. 專案結構（重點）
@@ -187,9 +195,21 @@ curl 'http://localhost:8080/api/modulith-outbox/outbox?limit=20'
 curl 'http://localhost:8080/api/consumer/events?limit=20'
 ```
 
-### Step 6: Kafka UI
+### Step 6: 驗證 retry / DLT（可選）
+將以下設定打開後重啟 app：
+```yaml
+app:
+  consumer:
+    fail-on-payload-contains: "O-FAIL"
+```
+
+再送一筆包含 `O-FAIL` 的 payload，事件會在重試後進入 DLT。
+
+### Step 7: Kafka UI
 - Kafdrop: `http://localhost:9000`
-- Topic: `outbox.event.OrderCreated`
+- Topics:
+  - `outbox.event.OrderCreated`
+  - `outbox.event.OrderCreated.DLT`
 
 ---
 

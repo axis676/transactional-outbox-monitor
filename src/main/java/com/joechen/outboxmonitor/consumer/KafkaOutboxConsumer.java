@@ -7,6 +7,7 @@ import org.apache.kafka.common.header.Header;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
@@ -23,15 +24,18 @@ public class KafkaOutboxConsumer {
     private final ConsumedEventStore consumedEventStore;
     private final ConsumerIdempotencyService idempotencyService;
     private final ConsumerMetrics consumerMetrics;
+    private final String failOnPayloadContains;
 
     public KafkaOutboxConsumer(TracePropagationSupport tracePropagationSupport,
                                ConsumedEventStore consumedEventStore,
                                ConsumerIdempotencyService idempotencyService,
-                               ConsumerMetrics consumerMetrics) {
+                               ConsumerMetrics consumerMetrics,
+                               @Value("${app.consumer.fail-on-payload-contains:}") String failOnPayloadContains) {
         this.tracePropagationSupport = tracePropagationSupport;
         this.consumedEventStore = consumedEventStore;
         this.idempotencyService = idempotencyService;
         this.consumerMetrics = consumerMetrics;
+        this.failOnPayloadContains = failOnPayloadContains;
     }
 
     @KafkaListener(topics = "outbox.event.OrderCreated", groupId = "outbox-monitor-consumer")
@@ -47,6 +51,11 @@ public class KafkaOutboxConsumer {
             span.setAttribute("messaging.destination", record.topic());
             span.setAttribute("messaging.kafka.partition", record.partition());
             span.setAttribute("messaging.event_id", eventId);
+
+            if (!failOnPayloadContains.isBlank() && record.value() != null
+                    && record.value().contains(failOnPayloadContains)) {
+                throw new IllegalStateException("simulated consumer failure for retry/DLT testing");
+            }
 
             if (!eventId.isBlank()) {
                 boolean firstSeen = idempotencyService.markIfFirstSeen(eventId, "outbox-monitor-consumer");

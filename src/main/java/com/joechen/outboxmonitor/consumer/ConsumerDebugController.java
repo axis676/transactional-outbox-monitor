@@ -28,7 +28,8 @@ public class ConsumerDebugController {
                 "count", consumedEventStore.latest(n).size(),
                 "metrics", Map.of(
                         "processed", consumerMetrics.processed(),
-                        "dedupHit", consumerMetrics.dedupHit()
+                        "dedupHit", consumerMetrics.dedupHit(),
+                        "dlt", consumerMetrics.dlt()
                 ),
                 "items", consumedEventStore.latest(n)
         ));

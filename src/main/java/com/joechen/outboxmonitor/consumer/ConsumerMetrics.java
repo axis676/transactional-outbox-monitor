@@ -9,6 +9,7 @@ public class ConsumerMetrics {
 
     private final AtomicLong processed = new AtomicLong();
     private final AtomicLong dedupHit = new AtomicLong();
+    private final AtomicLong dlt = new AtomicLong();
 
     public void incProcessed() {
         processed.incrementAndGet();
@@ -24,5 +25,13 @@ public class ConsumerMetrics {
 
     public long dedupHit() {
         return dedupHit.get();
+    }
+
+    public void incDlt() {
+        dlt.incrementAndGet();
+    }
+
+    public long dlt() {
+        return dlt.get();
     }
 }
