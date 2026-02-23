@@ -1,5 +1,7 @@
 package com.joechen.outboxmonitor.modulithoutbox;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -16,15 +18,18 @@ public class OutboxWriter {
     private final NamedParameterJdbcTemplate jdbc;
     private final boolean failFirstAttempt;
     private final OutboxMetrics outboxMetrics;
+    private final ObjectMapper objectMapper;
 
     private volatile boolean failedOnce = false;
 
     public OutboxWriter(NamedParameterJdbcTemplate jdbc,
                         @Value("${app.outbox.simulate-fail-first-attempt:false}") boolean failFirstAttempt,
-                        OutboxMetrics outboxMetrics) {
+                        OutboxMetrics outboxMetrics,
+                        ObjectMapper objectMapper) {
         this.jdbc = jdbc;
         this.failFirstAttempt = failFirstAttempt;
         this.outboxMetrics = outboxMetrics;
+        this.objectMapper = objectMapper;
     }
 
     @ApplicationModuleListener
@@ -52,7 +57,7 @@ public class OutboxWriter {
                     .addValue("aggregateType", "Order")
                     .addValue("aggregateId", event.orderId())
                     .addValue("eventType", "OrderCreated")
-                    .addValue("payload", "{\"orderId\":\"" + event.orderId() + "\",\"customerId\":\"" + event.customerId() + "\",\"amount\":" + event.amount() + "}")
+                    .addValue("payload", serializePayload(event))
                     .addValue("traceparent", event.trace().traceparent())
                     .addValue("tracestate", event.trace().tracestate())
                     .addValue("correlationId", event.trace().correlationId())
@@ -63,6 +68,18 @@ public class OutboxWriter {
         } catch (RuntimeException ex) {
             outboxMetrics.incWriteFailure();
             throw ex;
+        }
+    }
+
+    private String serializePayload(OrderCreatedEvent event) {
+        try {
+            return objectMapper.writeValueAsString(new OrderCreatedPayload(
+                    event.orderId(),
+                    event.customerId(),
+                    event.amount()
+            ));
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("failed to serialize outbox payload", ex);
         }
     }
 }

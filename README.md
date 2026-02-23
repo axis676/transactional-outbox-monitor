@@ -259,9 +259,8 @@ curl -X POST 'http://localhost:8080/api/consumer/dlt/<DLT_ID>/replay' \
 ## 8. 目前是 POC，哪些是刻意簡化
 
 1. 消費後資料先放 in-memory (`ConsumedEventStore`)，非正式持久化
-2. payload 序列化目前手動組字串，正式版建議改 Jackson
-3. 尚未做 DLT/重試主題與完整 consumer idempotency
-4. 未加入安全設定（SASL/ACL/TLS）
+2. payload 已改為 Jackson + DTO (`OrderCreatedPayload`)；後續可再升級為 schema registry
+3. 未加入 Kafka 安全設定（SASL/ACL/TLS）
 
 ---
 
