@@ -295,12 +295,28 @@ curl -X POST 'http://localhost:8080/api/consumer/dlt/<DLT_ID>/replay' \
   2. 檢查 producer 重試是否異常升高
   3. 確認 replay 流程有無重複觸發
 
-## 10. 下一步建議（正式化路線）
+## 10. 測試
+
+### 10.1 Integration test（已加入骨架）
+- `src/test/java/com/joechen/outboxmonitor/modulithoutbox/OutboxFlowIntegrationTest.java`
+- 使用 Testcontainers Postgres 驗證：
+  - 呼叫 `/api/modulith-outbox/orders`
+  - `outbox_event` 有寫入資料
+  - `correlation_id` 正確保存
+
+執行：
+```bash
+mvn test
+```
+
+> 需可用 Docker 環境（Testcontainers 會啟動 Postgres 容器）
+
+## 11. 下一步建議（正式化路線）
 
 1. 將 consumer 改為獨立服務（不同 repo/deploy）
-2. 引入 DLQ replay 管理 API
-3. 將 payload schema 化（Avro/JSON Schema）
-4. 加上整合測試（Testcontainers: Postgres + Kafka + Connect）
+2. 補 DLT replay 的審計紀錄（who/when/why）
+3. 升級 payload contract（Avro/JSON Schema + 版本管理）
+4. 補 Kafka 端整合測試（含 DLT/replay）
 5. 對接 OTEL exporter（Tempo/Jaeger）做端到端追蹤
 
 ---
