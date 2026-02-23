@@ -23,25 +23,30 @@ POC 專案：示範 **Spring Modulith + Transactional Outbox + Debezium Relay + 
 
 ## 2. 架構總覽
 
-```text
-HTTP Request
-  -> CorrelationIdFilter (X-Correlation-Id -> MDC)
-  -> OrderCommandService (@Transactional)
-      -> insert orders
-      -> publish OrderCreatedEvent
-  -> OutboxWriter (@ApplicationModuleListener + @Retryable + REQUIRES_NEW)
-      -> insert outbox_event (event_id/correlation_id/traceparent...)
+```mermaid
+flowchart LR
+    C[Client / API Caller] -->|HTTP + X-Correlation-Id| F[CorrelationIdFilter]
+    F -->|MDC.correlation_id| OCS[OrderCommandService\n@Transactional]
 
-Debezium Postgres Connector
-  -> capture outbox_event change
-  -> Outbox Event Router SMT
-  -> Kafka topic: outbox.event.OrderCreated
+    OCS -->|Insert| ORD[(orders)]
+    OCS -->|Publish| EVT[OrderCreatedEvent]
 
-KafkaOutboxConsumer
-  -> read headers (correlation_id/traceparent...)
-  -> MDC + linked consumer span
-  -> consume log + in-memory debug store
+    EVT --> OW[OutboxWriter\n@ApplicationModuleListener\n@Retryable + REQUIRES_NEW]
+    OW -->|Insert event_id/correlation_id/traceparent...| OB[(outbox_event)]
+
+    OB --> DBZ[Debezium Postgres Connector]
+    DBZ --> SMT[Outbox Event Router SMT]
+    SMT --> K[(Kafka\noutbox.event.OrderCreated)]
+
+    K --> KC[KafkaOutboxConsumer]
+    KC -->|headers -> MDC + span link| LOG[Application Logs]
+    KC --> CES[(ConsumedEventStore\nDebug)]
 ```
+
+補充：
+- 同步邊界：`Client -> API -> DB`（同交易）
+- 非同步邊界：`outbox_event -> Debezium -> Kafka -> Consumer`
+- Trace 策略：consumer 新開 span，透過 `span link` 關聯 producer context
 
 ---
 
