@@ -1,0 +1,26 @@
+{
+  "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+  "tasks.max": "1",
+  "database.hostname": "postgres",
+  "database.port": "5432",
+  "database.user": "app",
+  "database.password": "app",
+  "database.dbname": "app",
+  "topic.prefix": "app",
+  "plugin.name": "pgoutput",
+  "slot.name": "outbox_slot",
+  "publication.autocreate.mode": "filtered",
+  "table.include.list": "public.outbox_event",
+
+  "transforms": "outbox",
+  "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+  "transforms.outbox.route.by.field": "event_type",
+  "transforms.outbox.route.topic.replacement": "outbox.event.${routedByValue}",
+  "transforms.outbox.table.fields.additional.placement": "correlation_id:header,causation_id:header,traceparent:header,tracestate:header,aggregate_id:header",
+  "transforms.outbox.table.field.event.id": "event_id",
+  "transforms.outbox.table.field.event.key": "aggregate_id",
+  "transforms.outbox.table.field.event.payload": "payload",
+  "transforms.outbox.table.field.event.timestamp": "occurred_at",
+
+  "tombstones.on.delete": "false"
+}

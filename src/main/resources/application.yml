@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: transactional-outbox-monitor
+  datasource:
+    url: jdbc:postgresql://localhost:5432/app
+    username: app
+    password: app
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: outbox-monitor-consumer
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      missing-topics-fatal: false
+  sql:
+    init:
+      mode: always
+  modulith:
+    events:
+      republish-outstanding-events-on-restart: true
+
+app:
+  outbox:
+    retry:
+      max-attempts: 5
+      backoff-ms: 500
+    simulate-fail-first-attempt: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+logging:
+  pattern:
+    level: "%5p [corr:%X{correlation_id:-}]"
+
+server:
+  port: 8080
