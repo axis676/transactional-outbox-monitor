@@ -25,22 +25,22 @@ POC 專案：示範 **Spring Modulith + Transactional Outbox + Debezium Relay + 
 
 ```mermaid
 flowchart LR
-    C[Client / API Caller] -->|HTTP + X-Correlation-Id| F[CorrelationIdFilter]
-    F -->|MDC.correlation_id| OCS[OrderCommandService\n@Transactional]
+    C["Client / API Caller"] -->|"HTTP + X-Correlation-Id"| F["CorrelationIdFilter"]
+    F -->|"MDC correlation_id"| OCS["OrderCommandService<br/>Transactional"]
 
-    OCS -->|Insert| ORD[(orders)]
-    OCS -->|Publish| EVT[OrderCreatedEvent]
+    OCS -->|"Insert"| ORD[("orders")]
+    OCS -->|"Publish"| EVT["OrderCreatedEvent"]
 
-    EVT --> OW[OutboxWriter\n@ApplicationModuleListener\n@Retryable + REQUIRES_NEW]
-    OW -->|Insert event_id/correlation_id/traceparent...| OB[(outbox_event)]
+    EVT --> OW["OutboxWriter<br/>ApplicationModuleListener<br/>Retryable + REQUIRES_NEW"]
+    OW -->|"Insert event_id, correlation_id, traceparent"| OB[("outbox_event")]
 
-    OB --> DBZ[Debezium Postgres Connector]
-    DBZ --> SMT[Outbox Event Router SMT]
-    SMT --> K[(Kafka\noutbox.event.OrderCreated)]
+    OB --> DBZ["Debezium Postgres Connector"]
+    DBZ --> SMT["Outbox Event Router SMT"]
+    SMT --> K[("Kafka topic: outbox.event.OrderCreated")]
 
-    K --> KC[KafkaOutboxConsumer]
-    KC -->|headers -> MDC + span link| LOG[Application Logs]
-    KC --> CES[(ConsumedEventStore\nDebug)]
+    K --> KC["KafkaOutboxConsumer"]
+    KC -->|"headers -> MDC + span link"| LOG["Application Logs"]
+    KC --> CES[("ConsumedEventStore (Debug)")]
 ```
 
 補充：
