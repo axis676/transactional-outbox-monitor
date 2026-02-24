@@ -56,7 +56,7 @@ class DltReplayIntegrationTest {
                 Map.of("correlation_id", "ORD-REPLAY-1", "event_id", UUID.randomUUID().toString())
         );
 
-        Map<String, Object> result = dltReplayService.replayById(dltId);
+        Map<String, Object> result = dltReplayService.replayById(dltId, "test-user", "integration-test replay");
         assertThat(result.get("status")).isEqualTo("replayed");
         assertThat(result.get("toTopic")).isEqualTo("outbox.event.OrderCreated");
 

@@ -30,3 +30,14 @@ create table if not exists consumed_event (
     consumed_at timestamptz not null default now(),
     primary key (event_id, consumer_name)
 );
+
+create table if not exists dlt_replay_audit (
+    id bigserial primary key,
+    dlt_id varchar(100) not null,
+    from_topic varchar(255) not null,
+    to_topic varchar(255) not null,
+    message_key varchar(255),
+    actor varchar(255) not null,
+    reason text not null,
+    replayed_at timestamptz not null default now()
+);

@@ -13,14 +13,17 @@ public class DltReplayService {
 
     private final DltEventStore dltEventStore;
     private final KafkaTemplate<Object, Object> kafkaTemplate;
+    private final ReplayAuditService replayAuditService;
 
     public DltReplayService(DltEventStore dltEventStore,
-                            KafkaTemplate<Object, Object> kafkaTemplate) {
+                            KafkaTemplate<Object, Object> kafkaTemplate,
+                            ReplayAuditService replayAuditService) {
         this.dltEventStore = dltEventStore;
         this.kafkaTemplate = kafkaTemplate;
+        this.replayAuditService = replayAuditService;
     }
 
-    public Map<String, Object> replayById(String dltId) {
+    public Map<String, Object> replayById(String dltId, String actor, String reason) {
         Map<String, Object> event = dltEventStore.findById(dltId);
         if (event == null) {
             throw new IllegalArgumentException("DLT event not found: " + dltId);
@@ -47,12 +50,16 @@ public class DltReplayService {
 
         kafkaTemplate.send(record);
 
+        replayAuditService.record(dltId, dltTopic, mainTopic, key, actor, reason);
+
         return Map.of(
                 "status", "replayed",
                 "dltId", dltId,
                 "fromTopic", dltTopic,
                 "toTopic", mainTopic,
-                "key", key
+                "key", key,
+                "actor", actor,
+                "reason", reason
         );
     }
 }

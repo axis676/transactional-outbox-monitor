@@ -1,11 +1,13 @@
 package com.joechen.outboxmonitor.consumer;
 
 import com.joechen.outboxmonitor.security.AdminTokenGuard;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,17 +23,20 @@ public class ConsumerDebugController {
     private final ConsumerMetrics consumerMetrics;
     private final DltEventStore dltEventStore;
     private final DltReplayService dltReplayService;
+    private final ReplayAuditService replayAuditService;
     private final AdminTokenGuard adminTokenGuard;
 
     public ConsumerDebugController(ConsumedEventStore consumedEventStore,
                                    ConsumerMetrics consumerMetrics,
                                    DltEventStore dltEventStore,
                                    DltReplayService dltReplayService,
+                                   ReplayAuditService replayAuditService,
                                    AdminTokenGuard adminTokenGuard) {
         this.consumedEventStore = consumedEventStore;
         this.consumerMetrics = consumerMetrics;
         this.dltEventStore = dltEventStore;
         this.dltReplayService = dltReplayService;
+        this.replayAuditService = replayAuditService;
         this.adminTokenGuard = adminTokenGuard;
     }
 
@@ -60,7 +65,9 @@ public class ConsumerDebugController {
 
     @PostMapping("/dlt/{dltId}/replay")
     public ResponseEntity<Map<String, Object>> replay(@PathVariable String dltId,
-                                                       @RequestHeader(name = "X-Admin-Token", required = false) String adminToken) {
+                                                       @RequestHeader(name = "X-Admin-Token", required = false) String adminToken,
+                                                       @RequestHeader(name = "X-Admin-Actor", required = false) String adminActor,
+                                                       @Valid @RequestBody ReplayRequest request) {
         if (!adminTokenGuard.isAuthorized(adminToken)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
                     "status", "unauthorized",
@@ -68,13 +75,24 @@ public class ConsumerDebugController {
             ));
         }
 
+        String actor = (adminActor == null || adminActor.isBlank()) ? "unknown" : adminActor;
+
         try {
-            return ResponseEntity.ok(dltReplayService.replayById(dltId));
+            return ResponseEntity.ok(dltReplayService.replayById(dltId, actor, request.reason()));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(Map.of(
                     "status", "not_found",
                     "message", ex.getMessage()
             ));
         }
+    }
+
+    @GetMapping("/dlt/replay-audit")
+    public ResponseEntity<Map<String, Object>> replayAudit(@RequestParam(defaultValue = "20") int limit) {
+        int n = Math.max(1, Math.min(limit, 200));
+        return ResponseEntity.ok(Map.of(
+                "count", replayAuditService.latest(n).size(),
+                "items", replayAuditService.latest(n)
+        ));
     }
 }

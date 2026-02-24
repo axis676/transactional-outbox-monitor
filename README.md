@@ -227,10 +227,22 @@ app:
     token: "change-me"
 ```
 
-呼叫 replay API 時帶上 header `X-Admin-Token`：
+呼叫 replay API 時帶上管理資訊：
+- Header: `X-Admin-Token`
+- Header: `X-Admin-Actor`（誰執行）
+- Body: `reason`（為什麼重播）
+
 ```bash
 curl -X POST 'http://localhost:8080/api/consumer/dlt/<DLT_ID>/replay' \
-  -H 'X-Admin-Token: change-me'
+  -H 'Content-Type: application/json' \
+  -H 'X-Admin-Token: change-me' \
+  -H 'X-Admin-Actor: joechen' \
+  -d '{"reason":"fixed consumer bug, replay this message"}'
+```
+
+查看 replay 審計紀錄：
+```bash
+curl 'http://localhost:8080/api/consumer/dlt/replay-audit?limit=20'
 ```
 
 ### Step 7: Kafka UI
