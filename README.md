@@ -331,13 +331,31 @@ mvn test
 > `OutboxFlowIntegrationTest` 需 Docker（Testcontainers Postgres）。
 > `DltReplayIntegrationTest` 使用 Embedded Kafka，不需另外啟 Kafka 容器。
 
-## 11. 下一步建議（正式化路線）
+## 11. Tracing Backend（Jaeger）
+
+已新增本地觀測基礎設施：
+- `infra/observability/docker-compose.yml`
+- `infra/observability/README.md`
+
+啟動：
+```bash
+cd infra/observability
+docker compose up -d
+```
+
+- Jaeger UI: `http://localhost:16686`
+- OTLP gRPC: `localhost:4317`
+
+建議用 OpenTelemetry Java Agent 啟動 app，讓 traces 進 Jaeger。
+詳細指令見：`infra/observability/README.md`
+
+## 12. 下一步建議（正式化路線）
 
 1. 將 consumer 改為獨立服務（不同 repo/deploy）
-2. 補 DLT replay 的審計紀錄（who/when/why）
-3. 升級 payload contract（Avro/JSON Schema + 版本管理）
-4. 補 Kafka 端整合測試（含 DLT/replay）
-5. 對接 OTEL exporter（Tempo/Jaeger）做端到端追蹤
+2. 升級 payload contract（Avro/JSON Schema + 版本管理）
+3. 補 Kafka 端整合測試（含 end-to-end relay）
+4. 導入正式告警通路（Alertmanager -> Slack/Telegram）
+5. 補 replay API 權限整合（OIDC / RBAC）
 
 ---
 
